@@ -1,0 +1,106 @@
+#include <iostream>
+#include <fstream>
+#include <vector>
+#include <string>
+#include <sstream>
+
+using namespace std;
+
+// Function to split a string based on a delimiter
+vector<string> split(const string& s, char delimiter) {
+    vector<string> tokens;
+    stringstream ss(s);
+    string token;
+    while (getline(ss, token, delimiter)) {
+        tokens.push_back(token);
+    }
+    return tokens;
+}
+
+int main() {
+    // Open the CSV file
+    ifstream file("name2.csv");
+
+    // Check if the file was opened successfully
+    if (!file.is_open()) {
+        cerr << "Error opening file." << endl;
+        return 1;
+    }
+
+    // Day names
+    const string dayNames[] = {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"};
+
+    // Create vectors to store names, series names, and time slots
+    vector<string> names;
+    vector<vector<vector<pair<vector<string>, vector<string>>>>> timeSlots(7); // 2D vector to store pairs of time slots and series names for each day
+
+    // Create a string to store each line of the file
+    string line;
+
+    // Read each line of the file
+    while (getline(file, line)) {
+        // Split the line into values using a comma as the delimiter
+        stringstream ss(line);
+        vector<string> values;
+        string value;
+
+        // Read each value in the line
+        while (getline(ss, value, ',')) {
+            // Remove surrounding double quotes if present
+            if (!value.empty() && value.front() == '"' && value.back() == '"') {
+                value = value.substr(1, value.size() - 2);
+            }
+            // Add the value to the values vector
+            values.push_back(value);
+        }
+
+        // Ensure the line has enough values
+        if (values.size() < 9) { // Assuming you need at least 9 values in each line
+            cerr << "Invalid line: " << line << endl;
+            continue;
+        }
+
+        // Extract and store name, series names, and time slots
+        names.push_back(values[0]);
+        for (int i = 1; i <= 7; ++i) {
+            auto slots = split(values[i], ';');
+            timeSlots[i - 1].emplace_back();
+            for (const auto& slot : slots) {
+                auto slotParts = split(slot, '-');
+                auto seriesNames = split(values[8 + i], ','); // Extract series names
+                timeSlots[i - 1].back().emplace_back(slotParts, seriesNames);
+            }
+        }
+    }
+
+    // Close the file
+    file.close();
+
+    // Print the stored data
+    cout << "Names:\n";
+    for (const auto& name : names) {
+        cout << name << endl;
+    }
+
+    cout << "\nTime Slots:\n";
+    for (size_t day = 0; day < timeSlots.size(); ++day) {
+        cout << dayNames[day] << ":\n";
+        for (size_t person = 0; person < timeSlots[day].size(); ++person) {
+            cout << names[person] << ":\n"; // Person name
+            for (const auto& pair : timeSlots[day][person]) {
+                cout << "   Slots: ";
+                for (const auto& slot : pair.first) {
+                    cout << slot << " ";
+                }
+                cout << "Series: ";
+                for (const auto& series : pair.second) {
+                    cout << series << " ";
+                }
+                cout << endl;
+            }
+        }
+        cout << endl;
+    }
+
+    return 0;
+}
